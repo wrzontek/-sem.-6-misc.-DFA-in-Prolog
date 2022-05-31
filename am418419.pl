@@ -245,22 +245,46 @@ allStatesFullRelation(node(S, L, R), STR, LetterCount) :-
     allStatesFullRelation(L, STR, LetterCount),
     allStatesFullRelation(R, STR, LetterCount).
 
-
-correct(dfa(FP, Start, Final), idfa(StateRelationsTree, Start, FinalStateSet)) :-
+% correct(+Automat, -Reprezentacja)
+correct(dfa(FP, Start, Finals), idfa(StateRelationsTree, Start, FinalStateSet)) :-
     makeStateBSTFromFP(FP, StateTree),
-    stateInStateTree(Start, StateTree),
-    allStatesInStateTree(Final, StateTree),
+    allStatesInStateTree([Start | Finals], StateTree),
     makeLetterBST(FP, LetterTree),
     treeSize(LetterTree, LetterCount),
     makeStateRelationsTree(FP, StateRelationsTree),
     allStatesFullRelation(StateTree, StateRelationsTree, LetterCount),
-    makeStateBSTFromList(Final, FinalStateSet).
-
-
-
+    makeStateBSTFromList(Finals, FinalStateSet).
 % start in states
 % all finals in states
 % each state is connected with all letters ---- find state in statetree, check size = lettercount
+
+
+stateRelations(S, node(st(S, T), _, _), T).
+stateRelations(S1, node(st(S2, _), L, _), T) :-
+    S1 @< S2, 
+    stateRelations(S1, L, T).
+stateRelations(S1, node(st(S2, _), _, R), T) :-
+    S1 @> S2, 
+    stateRelations(S1, R, T).
+
+nextState(C, node(p(C, S), _, _), S).
+nextState(C1, node(p(C2, _), L, _), S) :-
+    C1 @< C2,
+    nextState(C1, L, S).
+nextState(C1, node(p(C2, _), _, R), S) :-
+    C1 @> C2,
+    nextState(C1, R, S).
+
+% accept(+Automat, ?Słowo)
+accept(A, W) :-
+    correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
+    acceptNext(W, Start, StateRelationsTree, FinalStateSet).
+
+acceptNext([], S, _, FinalStateSet) :- stateInStateTree(S, FinalStateSet).    
+acceptNext([C | W], S, STR, FinalStateSet) :-
+    stateRelations(S, STR, SR),  % get the current state's relation tree
+    nextState(C, SR, NS),
+    acceptNext(W, NS, STR, FinalStateSet).
 
 
 example(a11, dfa([fp(1,a,1),fp(1,b,2),fp(2,a,2),fp(2,b,1)], 1, [2,1])).
