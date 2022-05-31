@@ -155,35 +155,49 @@ dodaj(Elem, [ _ | Lista]) :- dodaj(Elem, Lista).
 % tree(empty).
 % tree(node(_, L, P)) :- tree(L), tree(P).
 
-% insertBST(empty, E, node(E, empty, empty)).
-% insertBST(node(E, L, R), N, node(E, L1, R)) :- N @< E, insertBST(L, N, L1).
-% insertBST(node(E, L, R), N, node(E, L, R1)) :- N @> E, insertBST(R, N, R1).
+% wypiszBST([], []).
+% wypiszBST([A | L], [E, LT, RT]) :- A = E, append(L1, L2, L), wypiszBST(L1, LT), wypiszBST(L2, RT).
 
-% makeBST([], empty).
-% makeBST([A | L], D) :- makeBST(L, D1), insertBST(D1, A, D).
 
+insertBST(empty, E, node(E, empty, empty)).
+insertBST(node(E, L, R), N, node(E, L1, R)) :- N @< E, insertBST(L, N, L1).
+insertBST(node(E, L, R), N, node(E, L, R1)) :- N @> E, insertBST(R, N, R1).
+insertBST(node(E, L, R), E, node(E, L, R)).
+
+makeLetterBST([], empty).
+makeLetterBST([fp(_, C, _) | L], T) :- makeLetterBST(L, T1), insertBST(T1, C, T).
+
+makeStateBST([], empty).
+makeStateBST([fp(S1, _, S2) | L], T) :- makeStateBST(L, T1), insertBST(T1, S1, T2), insertBST(T2, S2, T).
 
 % TODO styl, długości linii, może bez mieszania polski/eng
 
-insertStateTree(empty, fp(S1, C, S2), node((S1, T), empty, empty)) :- insertRelationTree(empty, p(C, S2), T).
-insertStateTree(node((E, T), L, R), fp(S1, C, S2), node((E, T), L1, R)) :- S1 @< E, insertStateTree(L, fp(S1, C, S2), L1).
-insertStateTree(node((E, T), L, R), fp(S1, C, S2), node((E, T), L, R1)) :- S1 @> E, insertStateTree(R, fp(S1, C, S2), R1).
-insertStateTree(node((E, T), L, R), fp(E, C, S2), node((E, T1), L, R)) :- insertRelationTree(T, p(C, S2), T1).
+treeSize(empty, 0).
+treeSize(node(_, L, R), 1 + LSize + RSize) :- treeSize(L, LSize), treeSize(R, RSize).
+
+insertStateRelationsTree(empty, fp(S1, C, S2), node((S1, T), empty, empty)) :- insertRelationTree(empty, p(C, S2), T).
+insertStateRelationsTree(node((S, T), L, R), fp(S1, C, S2), node((S, T), L1, R)) :- S1 @< S, insertStateRelationsTree(L, fp(S1, C, S2), L1).
+insertStateRelationsTree(node((S, T), L, R), fp(S1, C, S2), node((S, T), L, R1)) :- S1 @> S, insertStateRelationsTree(R, fp(S1, C, S2), R1).
+insertStateRelationsTree(node((S, T), L, R), fp(S, C, S2), node((S, T1), L, R)) :- insertRelationTree(T, p(C, S2), T1).
 
 insertRelationTree(empty, p(C, S), node(p(C, S), empty, empty)).
 insertRelationTree(node(p(C1, S1), L, R), p(C2, S2), node(p(C1, S1), L1, R)) :- C2 @< C1, insertRelationTree(L, p(C2, S2), L1).
 insertRelationTree(node(p(C1, S1), L, R), p(C2, S2), node(p(C1, S1), L, R1)) :- C2 @> C1, insertRelationTree(R, p(C2, S2), R1).
 
 
-% wypiszBST([], []).
-% wypiszBST([A | L], [E, LT, RT]) :- A = E, append(L1, L2, L), wypiszBST(L1, LT), wypiszBST(L2, RT).
-
-makeStateTree([], empty).
-makeStateTree([E | L], T) :- makeStateTree(L, T1), insertStateTree(T1, E, T).
+makeStateRelationsTree([], empty).
+makeStateRelationsTree([E | L], T) :- makeStateRelationsTree(L, T1), insertStateRelationsTree(T1, E, T).
 
 
-% correct(dfa(FP, Start, [Final | FinalList]), _) :- stateTree(FP, StateTree), member(Start, States), 
+% correct(dfa(FP, Start, [Final | FinalList]), _) :- 
+%     makeStateRelationsTree(FP, StateTree), 
+%     stateInStateTree(Start, StateTree), 
+%     allStatesInStateTree([Final | FinalList], StateTree),
 
+
+% start in states
+% all finals in states
+% each state is connected to all other states with all letters ---- find state in statetree, check size = lettercount
 
 
 
