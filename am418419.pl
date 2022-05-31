@@ -286,6 +286,18 @@ acceptNext([C | W], S, STR, FinalStateSet) :-
     nextState(C, SR, NS),
     acceptNext(W, NS, STR, FinalStateSet).
 
+% empty(+Automat)
+empty(A) :-
+    correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
+    \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
+
+getToFinal(S, _, _, FinalStateSet) :- stateInStateTree(S, FinalStateSet).   
+getToFinal(S, V, STR, FinalStateSet) :-
+    stateRelations(S, STR, SR),  % get the current state's relation tree
+    nextState(_, SR, NS),
+    \+member(S, V),
+    getToFinal(NS, [S | V], STR, FinalStateSet).
+
 
 example(a11, dfa([fp(1,a,1),fp(1,b,2),fp(2,a,2),fp(2,b,1)], 1, [2,1])).
 example(a12, dfa([fp(x,a,y),fp(x,b,x),fp(y,a,x),fp(y,b,x)], x, [x,y])).
