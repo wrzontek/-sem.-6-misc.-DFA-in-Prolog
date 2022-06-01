@@ -1,157 +1,3 @@
-% use module(library(lists))
-
-nat(0).
-nat(s(X)) :- nat(X).
-
-plus(0, X, X).
-plus(s(X), Y, s(Z)) :- plus(X, Y, Z).
-
-minus(X, Y, Z) :- plus(Y, Z, X).
-
-fib(0, s(0)).
-fib(s(0), s(0)).
-fib(s(s(K)), N) :- fib(s(K), A), fib(K, B), plus(A, B, N).
-
-lista([]).
-lista([_ | L]) :- lista(L).
-
-pierwszy(E, [E | _]).
-
-ostatni(E, [E]).
-ostatni(E, [_ | L]) :- ostatni(E, L).
-
-element(E, [E | _]).
-element(E, [_ | L]) :- element(E, L).
-
-
-scal([], L, L).
-scal([A | L1], L2, [A | L3]) :- scal(L1, L2, L3).
-
-podziel([], [], []).
-podziel([A], [A], []).
-podziel([A, B | L], [A | N], [B | P]) :- podziel(L, N, P).
-
-rowna([], []).
-rowna([A | L1], [A | L2]) :- rowna(L1, L2).
-
-prefiks([], _).
-prefiks([A | L1], [A | L2]) :- prefiks(L1, L2).
-
-podlista(L1, L2) :- prefiks(L1, L2).
-podlista(L1, [_ | L2]) :- prefiks(L1, L2).
-
-podciag([], _).
-podciag([A | L1], [A | L2]) :- podciag(L1, L2).
-podciag(L1, [_ | L2]) :- podciag(L1, L2).
-
-suma([], 0).
-suma([A | L], A + N) :- suma(L, N).
-
-% dlugosc0(+L, ?N)
-dlugosc0([], 0).
-dlugosc0([_ | L], N + 1) :- dlugosc0(L, N).
-
-% dlugosc1(+L, +N)
-dlugosc1([], 0).
-dlugosc1([_ | L], N) :- N1 is N - 1, dlugosc1(L, N1).
-
-
-niewieksza([], _).
-niewieksza([A | L], M) :- niewieksza(L, M), M =< A.
-
-min([A], A).
-min(L, M) :- member(M, L), niewieksza(L, M).
-
-odwroc(L,R) :- odwroc(L, [], R).
-odwroc([], M, M).
-odwroc([L1|LS], M, R) :- odwroc(LS, [L1|M], R).
-
-palindrom(L) :- palindrom(L, [], []).
-palindrom([], A, A).
-palindrom([E | L], A, B) :- append(B, [E], B1), palindrom(L, [E | A], B1).
-
-maa([]).
-maa([a | L]) :- maa(L).
-
-mab([]).
-mab([b | L]) :- mab(L).
-
-slowo(L) :- prefiks(P, L), append(P, R, L), maa(P), mab(R).
-
-flagaPolska(L, F) :- flagaPolska(L, [], F).
-flagaPolska([], [], []).
-flagaPolska([b | L], C, [b | F]) :- flagaPolska(L, C, F).
-flagaPolska([c | L], C, F) :- flagaPolska(L, [c | C], F).
-flagaPolska([], [c | C], [c | F]) :- flagaPolska([], C, F).
-
-mniejsze([], _, []).
-mniejsze([A | L], E, [A | M]) :- A < E, mniejsze(L, E, M).
-mniejsze([A | L], E, M) :- A >= E, mniejsze(L, E, M).
-
-wiekszeR([], _, []).
-wiekszeR([A | L], E, [A | M]) :- A >= E, wiekszeR(L, E, M).
-wiekszeR([A | L], E, M) :- A < E, wiekszeR(L, E, M).
-
-quickSort([], []).
-quickSort([E | L], S) :- mniejsze(L, E, M), wiekszeR(L, E, W), quickSort(M, MS), quickSort(W, WS), append(MS, [E | WS], S).
-
-% drzewo([]).
-% drzewo((_, L, R)) :- drzewo(L), drzewo(R).
-% drzewo((_, [], [])).
-
-% insertBST([], E, [E, [], []]).
-% insertBST([E, L, R], N, [E, L1, R]) :- N =< E, insertBST(L, N, L1).
-% insertBST([E, L, R], N, [E, L, R1]) :- N > E, insertBST(R, N, R1).
-
-% wypiszBST([], []).
-% wypiszBST([A | L], [E, LT, RT]) :- A = E, append(L1, L2, L), wypiszBST(L1, LT), wypiszBST(L2, RT).
-
-
-% stworzBST([], []).
-% stworzBST([A | L], D) :- stworzBST(L, D1), insertBST(D1, A, D).
-
-liscie([], []).
-liscie([E, [], []], [E]).
-liscie([_, L, R], X) :- liscie(L, LL), liscie(R, RL), append(LL, RL, X).
-
-
-
-edge(a, b).
-edge(b, c).
-edge(c, d).
-
-connect(A, B) :- edge(A, B).
-connect(A, C) :- edge(A, B), connect(B, C).
-
-path(A, A, [A]).
-path(A, B, [A, P | L]) :- edge(A, P), path(P, B, [P |L]).
-
-edgeC(A, B) :- edge(A, B).
-edgeC(A, B) :- edge(B, A).
-
-pathC(A, B, P) :- pathC(A, B, [], P).
-pathC(A, B, V, [A, B]) :- edge(A, B), \+member(A, V).
-pathC(A, B, V, [A, X | Z]) :-
-  edge(A, X),
-  \+member(A, V),
-  pathC(X, B, [A | V], [X | Z]).
-
-zawieraEl([], _).
-zawieraEl([A | L], R) :- member(A, R), zawieraEl(L, R).
-
-euler([]).
-euler([_]).
-euler(P) :- pathC(_, _, V, _), zawieraEl(P, V), zawieraEl(V, P).
-
-dodaj(Elem, Lista) :- var(Lista), !, Lista = [Elem | _ ].
-dodaj(Elem, [ _ | Lista]) :- dodaj(Elem, Lista).
-% tree(empty).
-% tree(node(_, L, P)) :- tree(L), tree(P).
-
-% wypiszBST([], []).
-% wypiszBST([A | L], [E, LT, RT]) :- A = E, append(L1, L2, L), wypiszBST(L1, LT), wypiszBST(L2, RT).
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -245,7 +91,7 @@ allStatesFullRelation(node(S, L, R), STR, LetterCount) :-
     allStatesFullRelation(L, STR, LetterCount),
     allStatesFullRelation(R, STR, LetterCount).
 
-% correct(+Automat, -Reprezentacja)
+% correct(+Automata, -Representation)
 correct(dfa(FP, Start, Finals), idfa(StateRelationsTree, Start, FinalStateSet)) :-
     makeStateBSTFromFP(FP, StateTree),
     allElementsInTree([Start | Finals], StateTree),
@@ -275,7 +121,7 @@ nextState(C1, node(p(C2, _), _, R), S) :-
     C1 @> C2,
     nextState(C1, R, S).
 
-% accept(+Automat, ?Słowo)
+% accept(+Automata, ?Word)
 accept(A, W) :-
     correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
     acceptNext(W, Start, StateRelationsTree, FinalStateSet).
@@ -288,7 +134,7 @@ acceptNext([C | W], S, STR, FinalStateSet) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% empty(+Automat)
+% empty(+Automata)
 empty(A) :-
     correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
     \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
@@ -325,21 +171,47 @@ allLettersInTree([fp(_, C, _) | L], T) :-
     elementInTree(C, T),
     allLettersInTree(L, T).
 
-alphabetsEqual(FP1, FP2) :-
+alphabetsEqual(dfa(FP1, _, _), dfa(FP2, _, _)) :-
     makeLetterBST(FP1, LetterTree1),
     allLettersInTree(FP2, LetterTree1),
     makeLetterBST(FP2, LetterTree2),
     allLettersInTree(FP1, LetterTree2).
 
-equal(dfa(FP1, Start1, Finals1), dfa(FP2, Start2, Finals2)) :-
-    alphabetsEqual(FP1, FP2),
-    correct(dfa(FP1, Start1, Finals1), idfa(StateRelationsTree1, Start1, FinalStateSet1)),
-    correct(dfa(FP2, Start2, Finals2), idfa(StateRelationsTree2, Start2, FinalStateSet2)).
+stateRelationsTreeToStateList(empty, _, SL, SL).
+stateRelationsTreeToStateList(node(st(S, _), L, R), SL, SL3) :-
+    SL1 = [S | SL],
+    stateRelationsTreeToStateList(L, SL1, SL2),
+    stateRelationsTreeToStateList(R, SL2, SL3).
 
+addCrossProduct(_, [], L, L).
+addCrossProduct(A, [B | BL], CL, [(A, B) | CL1]) :- addCrossProduct(A, BL, CL, CL1).
 
+makeCrossProduct(A, B, C) :- makeCrossProduct(A, B, [], C).
+makeCrossProduct([], _, L, L).
+makeCrossProduct([A | AL], BL, CL, CL2) :- 
+    makeCrossProduct(AL, BL, CL, CL1),
+    addCrossProduct(A, BL, CL1, CL2).
 
+% intersection(idfa(Start1, STR1, FSS1), idfa(Start2, STR2, FSS2), idfa(Start, STR, FSS)) :-
+%     stateRelationsTreeToStateList(STR1, SL1),
+%     stateRelationsTreeToStateList(STR2, SL2),
+%     makeCrossProduct(SL1, SL2, SL).
 
+% equal(+Automata1, +Automata2)
+equal(A, B) :-
+    alphabetsEqual(A, B),
+    correct(A, AR),
+    correct(B, BR).
+    % intersection(AR, BR, idfa(Start, StateRelationsTree, FinalStateSet)),
+    % \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
 
+% subsetEq(+Automata1, +Automata2)
+subsetEq(A, B) :-
+    alphabetsEqual(A, B),
+    correct(A, AR),
+    correct(B, BR).
+    % intersection(AR, BR, I),
+    % equal(AR, I).
 
 
 
