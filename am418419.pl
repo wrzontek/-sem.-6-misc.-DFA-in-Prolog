@@ -215,19 +215,19 @@ makeStateRelationsTree([E | L], T) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-stateInStateTree(S, node(S, _, _)).
-stateInStateTree(S1, node(S2, L, _)) :-
-    S1 @< S2,
-     stateInStateTree(S1, L).
-stateInStateTree(S1, node(S2, _, R)) :- 
-    S1 @> S2, 
-    stateInStateTree(S1, R).
+elementInTree(E, node(E, _, _)).
+elementInTree(E1, node(E2, L, _)) :-
+    E1 @< E2,
+    elementInTree(E1, L).
+elementInTree(E1, node(E2, _, R)) :- 
+    E1 @> E2, 
+    elementInTree(E1, R).
 
-allStatesInStateTree([], _).
-allStatesInStateTree([S | L], ST) :- 
-    stateInStateTree(S, ST),
-    allStatesInStateTree(L, ST).
-
+allElementsInTree([], _).
+allElementsInTree([E | L], T) :- 
+    elementInTree(E, T),
+    allElementsInTree(L, T).
+    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 stateFullRelations(S, node(st(S, T), _, _), LetterCount1) :- treeSize(T, LetterCount2), A is LetterCount1, A is LetterCount2.
@@ -248,7 +248,7 @@ allStatesFullRelation(node(S, L, R), STR, LetterCount) :-
 % correct(+Automat, -Reprezentacja)
 correct(dfa(FP, Start, Finals), idfa(StateRelationsTree, Start, FinalStateSet)) :-
     makeStateBSTFromFP(FP, StateTree),
-    allStatesInStateTree([Start | Finals], StateTree),
+    allElementsInTree([Start | Finals], StateTree),
     makeLetterBST(FP, LetterTree),
     treeSize(LetterTree, LetterCount),
     makeStateRelationsTree(FP, StateRelationsTree),
@@ -280,23 +280,82 @@ accept(A, W) :-
     correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
     acceptNext(W, Start, StateRelationsTree, FinalStateSet).
 
-acceptNext([], S, _, FinalStateSet) :- stateInStateTree(S, FinalStateSet).    
+acceptNext([], S, _, FinalStateSet) :- elementInTree(S, FinalStateSet).    
 acceptNext([C | W], S, STR, FinalStateSet) :-
     stateRelations(S, STR, SR),  % get the current state's relation tree
     nextState(C, SR, NS),
     acceptNext(W, NS, STR, FinalStateSet).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % empty(+Automat)
 empty(A) :-
     correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
     \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
 
-getToFinal(S, _, _, FinalStateSet) :- stateInStateTree(S, FinalStateSet).   
+getToFinal(S, _, _, FinalStateSet) :- elementInTree(S, FinalStateSet).   
 getToFinal(S, V, STR, FinalStateSet) :-
     stateRelations(S, STR, SR),  % get the current state's relation tree
     nextState(_, SR, NS),
     \+member(S, V),
     getToFinal(NS, [S | V], STR, FinalStateSet).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+stateRelationsTreeToFinalStateList(empty, _, SL, SL).
+stateRelationsTreeToFinalStateList(node(st(S, _), L, R), FinalStateSet, SL, SL3) :-
+    \+elementInTree(S, FinalStateSet),
+    SL1 = [S | SL],
+    stateRelationsTreeToFinalStateList(L, FinalStateSet, SL1, SL2),
+    stateRelationsTreeToFinalStateList(R, FinalStateSet, SL2, SL3).
+stateRelationsTreeToFinalStateList(node(st(S, _), L, R), FinalStateSet, SL, SL2) :-
+    elementInTree(S, FinalStateSet),
+    stateRelationsTreeToFinalStateList(L, FinalStateSet, SL, SL1),
+    stateRelationsTreeToFinalStateList(R, FinalStateSet, SL1, SL2).
+
+complement(idfa(STR, Start, FinalStateSet), idfa(STR, Start, SwappedFinalStateSet)) :-
+    stateRelationsTreeToFinalStateList(STR, FinalStateSet, [], SwappedFinalStateList),
+    makeStateBSTFromList(SwappedFinalStateList, SwappedFinalStateSet).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+allLettersInTree([], _).
+allLettersInTree([fp(_, C, _) | L], T) :- 
+    elementInTree(C, T),
+    allLettersInTree(L, T).
+
+alphabetsEqual(FP1, FP2) :-
+    makeLetterBST(FP1, LetterTree1),
+    allLettersInTree(FP2, LetterTree1),
+    makeLetterBST(FP2, LetterTree2),
+    allLettersInTree(FP1, LetterTree2).
+
+equal(dfa(FP1, Start1, Finals1), dfa(FP2, Start2, Finals2)) :-
+    alphabetsEqual(FP1, FP2),
+    correct(dfa(FP1, Start1, Finals1), idfa(StateRelationsTree1, Start1, FinalStateSet1)),
+    correct(dfa(FP2, Start2, Finals2), idfa(StateRelationsTree2, Start2, FinalStateSet2)).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 example(a11, dfa([fp(1,a,1),fp(1,b,2),fp(2,a,2),fp(2,b,1)], 1, [2,1])).
