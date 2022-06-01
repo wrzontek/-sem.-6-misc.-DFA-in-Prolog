@@ -121,7 +121,7 @@ nextState(C1, node(p(C2, _), _, R), S) :-
     C1 @> C2,
     nextState(C1, R, S).
 
-% accept(+Automata, ?Word)
+% accept(+Automata, ?Word) TODO działa dobrze tylko dla grounded
 accept(A, W) :-
     correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
     acceptNext(W, Start, StateRelationsTree, FinalStateSet).
