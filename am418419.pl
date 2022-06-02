@@ -177,7 +177,8 @@ alphabetsEqual(dfa(FP1, _, _), dfa(FP2, _, _)) :-
     makeLetterBST(FP2, LetterTree2),
     allLettersInTree(FP1, LetterTree2).
 
-stateRelationsTreeToStateList(empty, _, SL, SL).
+stateRelationsTreeToStateList(T, L) :- stateRelationsTreeToStateList(T, [], L).
+stateRelationsTreeToStateList(empty, SL, SL).
 stateRelationsTreeToStateList(node(st(S, _), L, R), SL, SL3) :-
     SL1 = [S | SL],
     stateRelationsTreeToStateList(L, SL1, SL2),
@@ -192,26 +193,71 @@ makeCrossProduct([A | AL], BL, CL, CL2) :-
     makeCrossProduct(AL, BL, CL, CL1),
     addCrossProduct(A, BL, CL1, CL2).
 
-% intersection(idfa(Start1, STR1, FSS1), idfa(Start2, STR2, FSS2), idfa(Start, STR, FSS)) :-
-%     stateRelationsTreeToStateList(STR1, SL1),
-%     stateRelationsTreeToStateList(STR2, SL2),
-%     makeCrossProduct(SL1, SL2, SL).
+treeToList(T, L) :- treeToList(T, [], L).
+treeToList(empty, L, L).
+treeToList(node(E, LT, RT), L, L3) :-
+    L1 = [E | L],
+    treeToList(LT, L1, L2),
+    treeToList(RT, L2, L3).
 
-% equal(+Automata1, +Automata2)
+stateCrossProduct(STR1, STR2, SL) :-
+    stateRelationsTreeToStateList(STR1, SL1),
+    stateRelationsTreeToStateList(STR2, SL2),
+    makeCrossProduct(SL1, SL2, SL).
+
+finalStateCrossProduct(FSS1, FSS2, FSS) :-
+    treeToList(FSS1, FSL1),
+    treeToList(FSS2, FSL2),
+    makeCrossProduct(FSL1, FSL2, FSL),
+    makeStateBSTFromList(FSL, FSS).
+
+addIntersectionRelations([], _, _, _, _, RL, RL).
+addIntersectionRelations([C | Alphabet], S1, SR1, S2, SR2, RL1, RL) :-
+    nextState(C, SR1, T1),
+    nextState(C, SR2, T2),
+    RL2 = [fp((S1, S2), C, (T1, T2)) | RL1],
+    addIntersectionRelations(Alphabet, S1, SR1, S2, SR2, RL2, RL).
+
+addAllIntersectionRelations(Alphabet, SL, STR1, STR2, FP) :- addAllIntersectionRelations(Alphabet, SL, STR1, STR2, [], FP).
+addAllIntersectionRelations(_, [], _, _, RL, RL).
+addAllIntersectionRelations(Alphabet, [(S1, S2) | SL], STR1, STR2, RL1, RL) :-
+    stateRelations(S1, STR1, SR1),
+    stateRelations(S2, STR2, SR2),
+    addIntersectionRelations(Alphabet, S1, SR1, S2, SR2, RL1, RL2),
+    addAllIntersectionRelations(Alphabet, SL, STR1, STR2, RL2, RL).
+
+intersection(Alphabet, idfa(STR1, Start1, FSS1), idfa(STR2, Start2, FSS2), idfa(STR, (Start1, Start2), FSS)) :-
+    finalStateCrossProduct(FSS1, FSS2, FSS),
+    stateCrossProduct(STR1, STR2, SL),
+    addAllIntersectionRelations(Alphabet, SL, STR1, STR2, FP),
+    makeStateRelationsTree(FP, STR).
+
+alphabet(dfa(FP, _, _), Alphabet) :-
+    makeLetterBST(FP, LetterTree),
+    treeToList(LetterTree, Alphabet).
+
+% equal(+Automata1, +Automata2) 
+% A = B <=> (A n B') = empty
 equal(A, B) :-
     alphabetsEqual(A, B),
     correct(A, AR),
-    correct(B, BR).
-    % intersection(AR, BR, idfa(Start, StateRelationsTree, FinalStateSet)),
-    % \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
+    correct(B, BR),
+    complement(BR, CR),
+    alphabet(A, Alphabet),
+    intersection(Alphabet, AR, CR, idfa(StateRelationsTree, Start, FinalStateSet)),
+    \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
 
-% subsetEq(+Automata1, +Automata2)
-subsetEq(A, B) :-
-    alphabetsEqual(A, B),
-    correct(A, AR),
-    correct(B, BR).
-    % intersection(AR, BR, I),
-    % equal(AR, I).
+
+
+% % subsetEq(+Automata1, +Automata2)
+% % A c B <=> (A n B) = A
+% subsetEq(A, B) :-
+%     alphabetsEqual(A, B),
+%     correct(A, AR),
+%     correct(B, BR),
+%     alphabet(A, Alphabet).
+%     % intersection(AR, BR, I),
+%     % equal(AR, I).
 
 
 
