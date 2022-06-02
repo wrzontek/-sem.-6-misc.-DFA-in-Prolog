@@ -136,9 +136,13 @@ acceptNext([C | W], S, STR, FinalStateSet) :-
 
 % empty(+Automata)
 empty(A) :-
-    correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
-    \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
+    correct(A, AR),
+    emptyInternal(AR).
 
+emptyInternal(idfa(StateRelationsTree, Start, FinalStateSet)) :-
+    \+getToFinal(Start, StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
+
+getToFinal(S, STR, FSS) :- getToFinal(S, [], STR, FSS).
 getToFinal(S, _, _, FinalStateSet) :- elementInTree(S, FinalStateSet).   
 getToFinal(S, V, STR, FinalStateSet) :-
     stateRelations(S, STR, SR),  % get the current state's relation tree
@@ -242,22 +246,28 @@ equal(A, B) :-
     alphabetsEqual(A, B),
     correct(A, AR),
     correct(B, BR),
-    complement(BR, CR),
     alphabet(A, Alphabet),
+    equalInternal(Alphabet, AR, BR).
+    % complement(BR, CR),
+    % alphabet(A, Alphabet),
+    % intersection(Alphabet, AR, CR, idfa(StateRelationsTree, Start, FinalStateSet)),
+    % \+getToFinal(Start, StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
+
+% AR = BR <=> (AR n BR') = empty
+equalInternal(Alphabet, AR, BR) :-
+    complement(BR, CR),
     intersection(Alphabet, AR, CR, idfa(StateRelationsTree, Start, FinalStateSet)),
-    \+getToFinal(Start, [], StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
+    \+getToFinal(Start, StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
 
-
-
-% % subsetEq(+Automata1, +Automata2)
-% % A c B <=> (A n B) = A
-% subsetEq(A, B) :-
-%     alphabetsEqual(A, B),
-%     correct(A, AR),
-%     correct(B, BR),
-%     alphabet(A, Alphabet).
-%     % intersection(AR, BR, I),
-%     % equal(AR, I).
+% subsetEq(+Automata1, +Automata2)
+% A c B <=> (A n B) = A
+subsetEq(A, B) :-
+    alphabetsEqual(A, B),
+    correct(A, AR),
+    correct(B, BR),
+    alphabet(A, Alphabet),
+    intersection(Alphabet, AR, BR, I),
+    equalInternal(Alphabet, I, AR).
 
 
 
