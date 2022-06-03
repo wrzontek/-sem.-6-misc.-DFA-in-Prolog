@@ -152,19 +152,19 @@ getToFinal(S, V, STR, FinalStateSet) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-stateRelationsTreeToFinalStateList(empty, _, SL, SL).
-stateRelationsTreeToFinalStateList(node(st(S, _), L, R), FinalStateSet, SL, SL3) :-
+nonFinalStateList(empty, _, SL, SL).
+nonFinalStateList(node(st(S, _), L, R), FinalStateSet, SL1, SL) :-
     \+elementInTree(S, FinalStateSet),
-    SL1 = [S | SL],
-    stateRelationsTreeToFinalStateList(L, FinalStateSet, SL1, SL2),
-    stateRelationsTreeToFinalStateList(R, FinalStateSet, SL2, SL3).
-stateRelationsTreeToFinalStateList(node(st(S, _), L, R), FinalStateSet, SL, SL2) :-
+    SL2 = [S | SL1],
+    nonFinalStateList(L, FinalStateSet, SL2, SL3),
+    nonFinalStateList(R, FinalStateSet, SL3, SL).
+nonFinalStateList(node(st(S, _), L, R), FinalStateSet, SL1, SL) :-
     elementInTree(S, FinalStateSet),
-    stateRelationsTreeToFinalStateList(L, FinalStateSet, SL, SL1),
-    stateRelationsTreeToFinalStateList(R, FinalStateSet, SL1, SL2).
+    nonFinalStateList(L, FinalStateSet, SL1, SL2),
+    nonFinalStateList(R, FinalStateSet, SL2, SL).
 
 complement(idfa(STR, Start, FinalStateSet), idfa(STR, Start, SwappedFinalStateSet)) :-
-    stateRelationsTreeToFinalStateList(STR, FinalStateSet, [], SwappedFinalStateList),
+    nonFinalStateList(STR, FinalStateSet, [], SwappedFinalStateList),
     makeStateBSTFromList(SwappedFinalStateList, SwappedFinalStateSet).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -240,50 +240,41 @@ alphabet(dfa(FP, _, _), Alphabet) :-
     makeLetterBST(FP, LetterTree),
     treeToList(LetterTree, Alphabet).
 
-% equal(+Automata1, +Automata2) 
-% A = B <=> (A n B') = empty
-equal(A, B) :-
-    alphabetsEqual(A, B),
-    correct(A, AR),
-    correct(B, BR),
-    alphabet(A, Alphabet),
-    equalInternal(Alphabet, AR, BR).
-    % complement(BR, CR),
-    % alphabet(A, Alphabet),
-    % intersection(Alphabet, AR, CR, idfa(StateRelationsTree, Start, FinalStateSet)),
-    % \+getToFinal(Start, StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
 
-% AR = BR <=> (AR n BR') = empty
-equalInternal(Alphabet, AR, BR) :-
-    complement(BR, CR),
-    intersection(Alphabet, AR, CR, idfa(StateRelationsTree, Start, FinalStateSet)),
-    \+getToFinal(Start, StateRelationsTree, FinalStateSet). % if unable to get from start to final state then language is empty
 
-% subsetEq(+Automata1, +Automata2)
-% A c B <=> (A n B) = A
+% A = 0, 2, 4, 6, 8
+% A'= 1, 3, 5, 7, 9
+% B = 0, 4, 8
+% B'= 1, 2, 3, 5, 6, 7, 9
+
+% a3 = a5 <=>  A = B <=> A n B' = (2,6,...) = empty FALSE
+% a5 = a3 <=>  B = A <=> B n A' = () = empty TRUE
+
+
+% subsetEq(+Automata1, +Automata2) 
+% A c B <=> (A n B') = empty
 subsetEq(A, B) :-
     alphabetsEqual(A, B),
     correct(A, AR),
     correct(B, BR),
     alphabet(A, Alphabet),
-    intersection(Alphabet, AR, BR, I),
-    equalInternal(Alphabet, I, AR).
+    subsetInternal(Alphabet, AR, BR).
 
+% AR c BR <=> (AR n BR') = empty
+subsetInternal(Alphabet, AR, BR) :-
+    complement(BR, CR),
+    intersection(Alphabet, AR, CR, I),
+    emptyInternal(I).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+% equal(+Automata1, +Automata2)
+% A = B <=> A c B and B c A
+equal(A, B) :-
+    alphabetsEqual(A, B),
+    correct(A, AR),
+    correct(B, BR),
+    alphabet(A, Alphabet),
+    subsetInternal(Alphabet, AR, BR),
+    subsetInternal(Alphabet, BR, AR).
 
 
 example(a11, dfa([fp(1,a,1),fp(1,b,2),fp(2,a,2),fp(2,b,1)], 1, [2,1])).
@@ -302,16 +293,3 @@ example(b3, dfa([fp(1,a,2)], 1, [])).
 example(b4, dfa([fp(1,a,1)], 2, [])).
 example(b5, dfa([fp(1,a,1)], 1, [1,2])).
 example(b6, dfa([], [], [])).
-
-
-
-
-
-
-
-
-
-
-
-
-
