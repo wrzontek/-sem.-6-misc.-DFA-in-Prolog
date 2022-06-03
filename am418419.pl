@@ -2,20 +2,49 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Adrian Matwiejuk
-% TODO zwięzły opis przyjętej wewnętrznej reprezentacji automatu.
-
-
-% TODO styl, długości linii, może bez mieszania polski/eng
+% Internally the automata are kept as idfa(StateRelationsTree, Start, FinalStateSet), where
+%   Start is the start state
+%   FinalStateSet is a BST of final states
+%   StateRelationsTree is a BST of pairs (State, RelationsTree), 
+%       where RelationsTree is a BST of transitions p(Letter, TargetState), from State to TargetState with Letter
 
 insertBST(empty, E, node(E, empty, empty)).
-insertBST(node(E, L, R), N, node(E, L1, R)) :- N @< E, insertBST(L, N, L1).
-insertBST(node(E, L, R), N, node(E, L, R1)) :- N @> E, insertBST(R, N, R1).
+insertBST(node(E, L, R), N, node(E, L1, R)) :-
+    N @< E, 
+    insertBST(L, N, L1).
+insertBST(node(E, L, R), N, node(E, L, R1)) :- 
+    N @> E,
+    insertBST(R, N, R1).
 insertBST(node(E, L, R), E, node(E, L, R)).
+
+insertBSTNoRepeat(empty, E, node(E, empty, empty)).
+insertBSTNoRepeat(node(E, L, R), N, node(E, L1, R)) :- 
+    N @< E, 
+    insertBSTNoRepeat(L, N, L1).
+insertBSTNoRepeat(node(E, L, R), N, node(E, L, R1)) :- 
+    N @> E, 
+    insertBSTNoRepeat(R, N, R1).
+
+treeSize(empty, 0).
+treeSize(node(_, L, R), 1 + LSize + RSize) :- 
+    treeSize(L, LSize), 
+    treeSize(R, RSize).
+
+treeToList(T, L) :- treeToList(T, [], L).
+treeToList(empty, L, L).
+treeToList(node(E, LT, RT), L, L3) :-
+    L1 = [E | L],
+    treeToList(LT, L1, L2),
+    treeToList(RT, L2, L3).
 
 makeLetterBST([], empty).
 makeLetterBST([fp(_, C, _) | L], T) :- 
     makeLetterBST(L, T1), 
     insertBST(T1, C, T).
+
+alphabet(dfa(FP, _, _), Alphabet) :-
+    makeLetterBST(FP, LetterTree),
+    treeToList(LetterTree, Alphabet).
 
 makeStateBSTFromFP([], empty).
 makeStateBSTFromFP([fp(S1, _, S2) | L], T) :- 
@@ -26,12 +55,7 @@ makeStateBSTFromFP([fp(S1, _, S2) | L], T) :-
 makeStateBSTFromList([], empty).
 makeStateBSTFromList([S | L], T) :-
     makeStateBSTFromList(L, T1),
-    insertBST(T1, S, T).
-
-treeSize(empty, 0).
-treeSize(node(_, L, R), 1 + LSize + RSize) :- 
-    treeSize(L, LSize), 
-    treeSize(R, RSize).
+    insertBSTNoRepeat(T1, S, T).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -45,6 +69,7 @@ insertStateRelationsTree(node(st(S, T), L, R), fp(S1, C, S2), node(st(S, T), L, 
     insertStateRelationsTree(R, fp(S1, C, S2), R1).
 insertStateRelationsTree(node(st(S, T), L, R), fp(S, C, S2), node(st(S, T1), L, R)) :- 
     insertRelationTree(T, p(C, S2), T1).
+
 
 insertRelationTree(empty, p(C, S), node(p(C, S), empty, empty)).
 insertRelationTree(node(p(C1, S1), L, R), p(C2, S2), node(p(C1, S1), L1, R)) :- 
@@ -84,7 +109,6 @@ stateFullRelations(S1, node(st(S2, _), _, R), LetterCount) :-
     S1 @> S2, 
     stateFullRelations(S1, R, LetterCount).
 
-
 allStatesFullRelation(empty, _, _).
 allStatesFullRelation(node(S, L, R), STR, LetterCount) :- 
     stateFullRelations(S, STR, LetterCount),
@@ -94,16 +118,14 @@ allStatesFullRelation(node(S, L, R), STR, LetterCount) :-
 % correct(+Automata, -Representation)
 correct(dfa(FP, Start, Finals), idfa(StateRelationsTree, Start, FinalStateSet)) :-
     makeStateBSTFromFP(FP, StateTree),
-    allElementsInTree([Start | Finals], StateTree),
+    allElementsInTree([Start | Finals], StateTree), % ensures FP is coherent with start and final states
     makeLetterBST(FP, LetterTree),
     treeSize(LetterTree, LetterCount),
     makeStateRelationsTree(FP, StateRelationsTree),
-    allStatesFullRelation(StateTree, StateRelationsTree, LetterCount),
-    makeStateBSTFromList(Finals, FinalStateSet).
-% start in states
-% all finals in states
-% each state is connected with all letters ---- find state in statetree, check size = lettercount
+    allStatesFullRelation(StateTree, StateRelationsTree, LetterCount), % ensures FP is a complete function
+    makeStateBSTFromList(Finals, FinalStateSet). % ensured Finals has no repeats
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 stateRelations(S, node(st(S, T), _, _), T).
 stateRelations(S1, node(st(S2, _), L, _), T) :-
@@ -121,14 +143,14 @@ nextState(C1, node(p(C2, _), _, R), S) :-
     C1 @> C2,
     nextState(C1, R, S).
 
-% accept(+Automata, ?Word) TODO działa dobrze tylko dla grounded
+% accept(+Automata, ?Word)
 accept(A, W) :-
     correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
     acceptNext(W, Start, StateRelationsTree, FinalStateSet).
 
 acceptNext([], S, _, FinalStateSet) :- elementInTree(S, FinalStateSet).    
 acceptNext([C | W], S, STR, FinalStateSet) :-
-    stateRelations(S, STR, SR),  % get the current state's relation tree
+    stateRelations(S, STR, SR),  % gets the current state's relation tree
     nextState(C, SR, NS),
     acceptNext(W, NS, STR, FinalStateSet).
 
@@ -169,7 +191,6 @@ complement(idfa(STR, Start, FinalStateSet), idfa(STR, Start, SwappedFinalStateSe
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
 allLettersInTree([], _).
 allLettersInTree([fp(_, C, _) | L], T) :- 
     elementInTree(C, T),
@@ -180,6 +201,8 @@ alphabetsEqual(dfa(FP1, _, _), dfa(FP2, _, _)) :-
     allLettersInTree(FP2, LetterTree1),
     makeLetterBST(FP2, LetterTree2),
     allLettersInTree(FP1, LetterTree2).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 stateRelationsTreeToStateList(T, L) :- stateRelationsTreeToStateList(T, [], L).
 stateRelationsTreeToStateList(empty, SL, SL).
@@ -197,13 +220,6 @@ makeCrossProduct([A | AL], BL, CL, CL2) :-
     makeCrossProduct(AL, BL, CL, CL1),
     addCrossProduct(A, BL, CL1, CL2).
 
-treeToList(T, L) :- treeToList(T, [], L).
-treeToList(empty, L, L).
-treeToList(node(E, LT, RT), L, L3) :-
-    L1 = [E | L],
-    treeToList(LT, L1, L2),
-    treeToList(RT, L2, L3).
-
 stateCrossProduct(STR1, STR2, SL) :-
     stateRelationsTreeToStateList(STR1, SL1),
     stateRelationsTreeToStateList(STR2, SL2),
@@ -214,6 +230,8 @@ finalStateCrossProduct(FSS1, FSS2, FSS) :-
     treeToList(FSS2, FSL2),
     makeCrossProduct(FSL1, FSL2, FSL),
     makeStateBSTFromList(FSL, FSS).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 addIntersectionRelations([], _, _, _, _, RL, RL).
 addIntersectionRelations([C | Alphabet], S1, SR1, S2, SR2, RL1, RL) :-
@@ -235,21 +253,6 @@ intersection(Alphabet, idfa(STR1, Start1, FSS1), idfa(STR2, Start2, FSS2), idfa(
     stateCrossProduct(STR1, STR2, SL),
     addAllIntersectionRelations(Alphabet, SL, STR1, STR2, FP),
     makeStateRelationsTree(FP, STR).
-
-alphabet(dfa(FP, _, _), Alphabet) :-
-    makeLetterBST(FP, LetterTree),
-    treeToList(LetterTree, Alphabet).
-
-
-
-% A = 0, 2, 4, 6, 8
-% A'= 1, 3, 5, 7, 9
-% B = 0, 4, 8
-% B'= 1, 2, 3, 5, 6, 7, 9
-
-% a3 = a5 <=>  A = B <=> A n B' = (2,6,...) = empty FALSE
-% a5 = a3 <=>  B = A <=> B n A' = () = empty TRUE
-
 
 % subsetEq(+Automata1, +Automata2) 
 % A c B <=> (A n B') = empty
@@ -286,7 +289,6 @@ example(a5, dfa([fp(x,a,y),fp(y,a,z),fp(z,a,zz),fp(zz,a,x)], x, [x])).
 example(a6, dfa([fp(1,a,1),fp(1,b,2),fp(2,a,2),fp(2,b,1)], 1, [])).
 example(a7, dfa([fp(1,a,1),fp(1,b,2),fp(2,a,2),fp(2,b,1),fp(3,b,3),fp(3,a,3)], 1, [3])).
 
-% bad ones
 example(b1, dfa([fp(1,a,1),fp(1,a,1)], 1, [])).
 example(b2, dfa([fp(1,a,1),fp(1,a,2)], 1, [])).
 example(b3, dfa([fp(1,a,2)], 1, [])).
