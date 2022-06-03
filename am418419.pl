@@ -145,14 +145,31 @@ nextState(C1, node(p(C2, _), _, R), S) :-
 
 % accept(+Automata, ?Word)
 accept(A, W) :-
-    correct(A, idfa(StateRelationsTree, Start, FinalStateSet)),
-    acceptNext(W, Start, StateRelationsTree, FinalStateSet).
+    correct(A, AR),
+    acceptInternal(AR, W).
+
+acceptInternal(AR, W) :- var(W), acceptOfLenghtOrLonger(AR, W, 0).
+acceptInternal(idfa(StateRelationsTree, Start, FinalStateSet), W) :- nonvar(W), acceptNext(W, Start, StateRelationsTree, FinalStateSet).
+
+acceptOfLenghtOrLonger(idfa(StateRelationsTree, Start, FinalStateSet), W, L) :-
+    (   
+        acceptOfLengthNext(W, Start, StateRelationsTree, FinalStateSet, L)
+    ;
+        acceptOfLenghtOrLonger(idfa(StateRelationsTree, Start, FinalStateSet), W, L + 1)
+    ).
+
+acceptOfLengthNext([], S, _, FinalStateSet, L) :- 0 is L, elementInTree(S, FinalStateSet).    
+acceptOfLengthNext([C | W], S, STR, FinalStateSet, L) :-
+    L > 0,
+    stateRelations(S, STR, SR),  % gets the current state's relation tree
+    nextState(C, SR, NS),
+    acceptOfLengthNext(W, NS, STR, FinalStateSet, L - 1).
 
 acceptNext([], S, _, FinalStateSet) :- elementInTree(S, FinalStateSet).    
 acceptNext([C | W], S, STR, FinalStateSet) :-
     stateRelations(S, STR, SR),  % gets the current state's relation tree
     nextState(C, SR, NS),
-    acceptNext(W, NS, STR, FinalStateSet).
+    acceptNext(W, NS, STR, FinalStateSet).    
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
